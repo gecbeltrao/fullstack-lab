@@ -18,6 +18,7 @@ def create_app() -> FastAPI:
     """Cria uma API com dados isolados para cada execução ou teste."""
     app = FastAPI(title="Eventos do Trilha")
     events: dict[int, dict] = {}
+    prox_id = 1
 
     @app.get("/events")
     def list_events():
@@ -32,10 +33,21 @@ def create_app() -> FastAPI:
 
     @app.post("/events", status_code=201)
     def create_event(data: EventInput):
-        # Atividade 1: valide título e capacidade, gere um ID e guarde o
-        # evento em `events`. A resposta deve conter id, title, date e capacity.
-        # Os testes mostram os casos de sucesso e de entrada inválida.
-        raise HTTPException(status_code=501, detail="Cadastro ainda não implementado")
+        nonlocal prox_id
+        if not data.title.strip():
+            raise HTTPException(status_code=422, detail="O título não pode ser vazio")
+        if data.capacity <= 0:
+            raise HTTPException(status_code=422, detail="A capacidade deve ser maior que zero")
+        event = {
+            "id": prox_id,
+            "title": data.title,
+            "date": data.date.isoformat(),
+            "capacity": data.capacity,
+        }
+        events[prox_id] = event
+        prox_id += 1
+        return event
+        
 
     return app
 
