@@ -1,11 +1,35 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { listEvents, register } from './api.js'
 
-// Esta tela já tem a estrutura visual. Sua tarefa é ligá-la à API e ao estado React.
-// Consulte docs/checkpoint-04.md antes de substituir os dados de exemplo.
 export default function App() {
   const [userId, setUserId] = useState(1)
-  const example = { id: 0, title: 'Exemplo de evento', date: '2026-10-10', available_slots: 2 }
+  const [events, setEvents] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [sendingId, setSendingId] = useState(null)
+  const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    listEvents()
+      .then(lista => setEvents(lista))
+      .catch(() => setError('Não foi possível carregar os eventos.'))
+      .finally(() => setLoading(false))
+  }, [])
+
+  async function handleRegister(eventId) {
+    setSendingId(eventId)
+    setMessage('')
+    setError('')
+    try {
+      await register(eventId, userId)
+      setEvents(await listEvents())
+      setMessage('Inscrição realizada!')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSendingId(null)
+    }
+  }
 
   return <main className="page">
     <header>
@@ -21,13 +45,25 @@ export default function App() {
       </select>
     </label>
 
+    {message && <p role="status">{message}</p>}
     <section aria-label="Lista de eventos" className="events">
-      <article className="card">
-        <p className="date">{example.date}</p>
-        <h2>{example.title}</h2>
-        <p>{example.available_slots} vagas disponíveis</p>
-        <button type="button">Inscrever-se</button>
-      </article>
+      {loading && <p>Carregando eventos...</p>}
+      {error && <p role="alert">{error}</p>}
+      {!loading && !error && events.length === 0 && <p>Nenhum evento cadastrado.</p>}
+      {events.map(event => (
+        <article className="card" key={event.id}>
+          <p className="date">{event.date}</p>
+          <h2>{event.title}</h2>
+          <p>{event.available_slots} {event.available_slots === 1 ? 'vaga disponível' : 'vagas disponíveis'}</p>
+          <button
+            type="button"
+            disabled={sendingId === event.id || event.available_slots === 0}
+            onClick={() => handleRegister(event.id)}
+          >
+            Inscrever-se
+          </button>
+        </article>
+      ))}
     </section>
   </main>
-}
+  }
